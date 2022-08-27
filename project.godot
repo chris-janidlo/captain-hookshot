@@ -8,8 +8,14 @@
 
 config_version=4
 
-_global_script_classes=[  ]
+_global_script_classes=[ {
+"base": "RigidBody2D",
+"class": "RopeSegment",
+"language": "GDScript",
+"path": "res://player/grapple gun/Rope Segment.gd"
+} ]
 _global_script_class_icons={
+"RopeSegment": ""
 }
 
 [application]

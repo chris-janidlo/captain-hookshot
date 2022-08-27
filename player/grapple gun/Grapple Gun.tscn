@@ -1,0 +1,26 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://player/grapple gun/Grapple Gun.gd" type="Script" id=1]
+[ext_resource path="res://icon.png" type="Texture" id=2]
+
+[node name="Grapple Gun" type="Node2D"]
+script = ExtResource( 1 )
+rope_segment_count = 50
+
+[node name="RigidBody2D" type="RigidBody2D" parent="."]
+mode = 3
+
+[node name="Sprite" type="Sprite" parent="."]
+visible = false
+scale = Vector2( 0.2, 0.2 )
+texture = ExtResource( 2 )
+
+[node name="Line" type="Line2D" parent="."]
+width = 0.001
+default_color = Color( 0, 0, 0, 1 )
+antialiased = true
+
+[node name="Joint" type="PinJoint2D" parent="."]
+node_a = NodePath("../RigidBody2D")
+bias = 0.1
+softness = 0.1
