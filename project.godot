@@ -9,12 +9,18 @@
 config_version=4
 
 _global_script_classes=[ {
+"base": "Node2D",
+"class": "Rope",
+"language": "GDScript",
+"path": "res://player/grapple gun/rope/Rope.gd"
+}, {
 "base": "RigidBody2D",
 "class": "RopeSegment",
 "language": "GDScript",
-"path": "res://player/grapple gun/Rope Segment.gd"
+"path": "res://player/grapple gun/rope/Rope Segment.gd"
 } ]
 _global_script_class_icons={
+"Rope": "",
 "RopeSegment": ""
 }
 

@@ -14,13 +14,3 @@ mode = 3
 visible = false
 scale = Vector2( 0.2, 0.2 )
 texture = ExtResource( 2 )
-
-[node name="Line" type="Line2D" parent="."]
-width = 0.001
-default_color = Color( 0, 0, 0, 1 )
-antialiased = true
-
-[node name="Joint" type="PinJoint2D" parent="."]
-node_a = NodePath("../RigidBody2D")
-bias = 0.1
-softness = 0.1
