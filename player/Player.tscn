@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=2]
+[gd_scene load_steps=4 format=2]
 
 [ext_resource path="res://player/Player.png" type="Texture" id=1]
+[ext_resource path="res://player/grapple gun/Grapple Gun.tscn" type="PackedScene" id=2]
 
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 2.5, 6.5 )
@@ -15,3 +16,11 @@ shape = SubResource( 1 )
 texture = ExtResource( 1 )
 centered = false
 offset = Vector2( -8, -7 )
+
+[node name="Grapple Gun Right" parent="." instance=ExtResource( 2 )]
+position = Vector2( 5, 4 )
+control_direction = "right"
+
+[node name="Grapple Gun Left" parent="." instance=ExtResource( 2 )]
+position = Vector2( -4, 4 )
+control_direction = "left"
