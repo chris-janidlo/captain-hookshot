@@ -2,5 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <RootNamespace>CaptainHookshot</RootNamespace>
+    <LangVersion>10</LangVersion>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
 </Project>
