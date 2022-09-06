@@ -19,8 +19,8 @@ offset = Vector2( -8, -7 )
 
 [node name="Grapple Gun Right" parent="." instance=ExtResource( 2 )]
 position = Vector2( 5, 4 )
-control_direction = "right"
+_controlDirection = "right"
 
 [node name="Grapple Gun Left" parent="." instance=ExtResource( 2 )]
 position = Vector2( -4, 4 )
-control_direction = "left"
+_controlDirection = "left"

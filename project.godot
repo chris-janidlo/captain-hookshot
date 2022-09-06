@@ -8,28 +8,6 @@
 
 config_version=4
 
-_global_script_classes=[ {
-"base": "KinematicBody2D",
-"class": "Hook",
-"language": "GDScript",
-"path": "res://player/grapple gun/Hook.gd"
-}, {
-"base": "Node2D",
-"class": "Rope",
-"language": "GDScript",
-"path": "res://player/grapple gun/rope/Rope.gd"
-}, {
-"base": "RigidBody2D",
-"class": "RopeSegment",
-"language": "GDScript",
-"path": "res://player/grapple gun/rope/Rope Segment.gd"
-} ]
-_global_script_class_icons={
-"Hook": "",
-"Rope": "",
-"RopeSegment": ""
-}
-
 [application]
 
 config/name="Captain Hookshot"

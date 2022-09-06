@@ -1,10 +1,15 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=4 format=2]
 
-[ext_resource path="res://player/grapple gun/Grapple Gun.gd" type="Script" id=1]
+[ext_resource path="res://player/grapple gun/GrappleGun.cs" type="Script" id=1]
+[ext_resource path="res://player/grapple gun/rope/Rope.tscn" type="PackedScene" id=2]
+[ext_resource path="res://player/grapple gun/Hook.tscn" type="PackedScene" id=3]
 
 [node name="Grapple Gun" type="Node2D"]
 script = ExtResource( 1 )
-hook_exit_speed = 200.0
-rope_segment_count = 30
+_hookExitSpeed = 200.0
+_ropeSegmentCount = 30
+_spawnContainerPath = NodePath("Spawn Container")
+_ropeScene = ExtResource( 2 )
+_hookScene = ExtResource( 3 )
 
 [node name="Spawn Container" type="Node2D" parent="."]

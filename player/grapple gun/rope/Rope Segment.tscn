@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=2]
 
 [ext_resource path="res://icon.png" type="Texture" id=1]
-[ext_resource path="res://player/grapple gun/rope/Rope Segment.gd" type="Script" id=2]
+[ext_resource path="res://player/grapple gun/rope/RopeSegment.cs" type="Script" id=2]
 
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 2, 1 )
@@ -12,6 +12,7 @@ collision_mask = 0
 linear_damp = 0.1
 angular_damp = 1.0
 script = ExtResource( 2 )
+_jointPath = NodePath("Joint")
 
 [node name="Shape" type="CollisionShape2D" parent="."]
 position = Vector2( 2, 0 )
