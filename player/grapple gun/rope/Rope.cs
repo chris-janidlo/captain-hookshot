@@ -37,7 +37,7 @@ public class Rope : KinematicBody2D
 
     public void AttachEndTo(PhysicsBody2D other)
     {
-        _ropeSegments.Last().Attach(other, true);
+        _ropeSegments.Last().Attach(other);
     }
 
     private void SpawnRope()

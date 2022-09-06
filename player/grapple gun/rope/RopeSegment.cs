@@ -13,11 +13,8 @@ public class RopeSegment : RigidBody2D
         _joint = GetNode<Joint2D>(_jointPath);
     }
 
-    public void Attach(PhysicsBody2D other, bool moveSegmentToOther = false)
+    public void Attach(PhysicsBody2D other)
     {
-        if (moveSegmentToOther)
-            GlobalPosition = other.GlobalPosition;
-
         other.GlobalPosition = _joint.GlobalPosition;
         _joint.NodeB = other.GetPath();
     }

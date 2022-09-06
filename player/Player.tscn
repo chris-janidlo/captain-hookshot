@@ -6,21 +6,27 @@
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 2.5, 6.5 )
 
-[node name="Player" type="KinematicBody2D"]
+[node name="Player System" type="Node2D"]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2( 0.5, 0.5 )
-shape = SubResource( 1 )
+[node name="Body" type="KinematicBody2D" parent="."]
 
-[node name="Sprite" type="Sprite" parent="."]
+[node name="Sprite" type="Sprite" parent="Body"]
 texture = ExtResource( 1 )
 centered = false
 offset = Vector2( -8, -7 )
 
-[node name="Grapple Gun Right" parent="." instance=ExtResource( 2 )]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Body"]
+position = Vector2( 0.5, 0.5 )
+shape = SubResource( 1 )
+
+[node name="Grapple Gun Right" parent="Body" instance=ExtResource( 2 )]
 position = Vector2( 5, 4 )
 _controlDirection = "right"
+_hookFlightContainerPath = NodePath("../../Hook Flight Container")
 
-[node name="Grapple Gun Left" parent="." instance=ExtResource( 2 )]
+[node name="Grapple Gun Left" parent="Body" instance=ExtResource( 2 )]
 position = Vector2( -4, 4 )
 _controlDirection = "left"
+_hookFlightContainerPath = NodePath("../../Hook Flight Container")
+
+[node name="Hook Flight Container" type="Node2D" parent="."]

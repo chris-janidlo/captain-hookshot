@@ -1,15 +1,35 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://player/grapple gun/GrappleGun.cs" type="Script" id=1]
 [ext_resource path="res://player/grapple gun/rope/Rope.tscn" type="PackedScene" id=2]
-[ext_resource path="res://player/grapple gun/Hook.tscn" type="PackedScene" id=3]
+[ext_resource path="res://player/grapple gun/Hook.png" type="Texture" id=3]
+[ext_resource path="res://player/grapple gun/Gun.png" type="Texture" id=4]
+[ext_resource path="res://player/grapple gun/Hook.cs" type="Script" id=5]
 
 [node name="Grapple Gun" type="Node2D"]
 script = ExtResource( 1 )
 _hookExitSpeed = 200.0
 _ropeSegmentCount = 30
-_spawnContainerPath = NodePath("Spawn Container")
+_hookPath = NodePath("Sprite/Barrel/Hook")
+_barrelPath = NodePath("Sprite/Barrel")
 _ropeScene = ExtResource( 2 )
-_hookScene = ExtResource( 3 )
 
-[node name="Spawn Container" type="Node2D" parent="."]
+[node name="Sprite" type="Sprite" parent="."]
+texture = ExtResource( 4 )
+centered = false
+offset = Vector2( -1, -7 )
+
+[node name="Barrel" type="Node2D" parent="Sprite"]
+position = Vector2( 7, -3 )
+
+[node name="Hook" type="KinematicBody2D" parent="Sprite/Barrel"]
+collision_layer = 8
+collision_mask = 0
+script = ExtResource( 5 )
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Sprite/Barrel/Hook"]
+polygon = PoolVector2Array( 5, 0, 3, 2, 1, 2, 0, 0, 0, -1, 1, -3, 3, -3, 5, -1 )
+
+[node name="Sprite" type="Sprite" parent="Sprite/Barrel/Hook"]
+texture = ExtResource( 3 )
+offset = Vector2( 2.5, 0 )
