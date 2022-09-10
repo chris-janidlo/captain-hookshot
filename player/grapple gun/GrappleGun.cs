@@ -203,7 +203,8 @@ public class GrappleGun : Node2D
             Vector2
                 hookPos = Gun._hook.GlobalPosition,
                 targetPos = Gun._barrel.GlobalPosition;
-            return hookPos.DistanceSquaredTo(targetPos) < 5;
+            var hookTravelPerFrame = Gun.GetPhysicsProcessDeltaTime() * Gun._hookRetractSpeed;
+            return hookPos.DistanceSquaredTo(targetPos) < hookTravelPerFrame * hookTravelPerFrame * 4;
         }
 
         public override void OnEntered()
