@@ -13,6 +13,7 @@ _hookExitSpeed = 350.0
 _maxRopeLength = 200.0
 _hookRetractSpeed = 800.0
 _ropeSegmentCount = 30
+_aimSnapRegions = 8
 _hookPath = NodePath("Sprite/Barrel/Hook")
 _barrelPath = NodePath("Sprite/Barrel")
 _ropeScene = ExtResource( 2 )

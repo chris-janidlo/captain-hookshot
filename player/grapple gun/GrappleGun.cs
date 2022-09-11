@@ -14,7 +14,7 @@ public class GrappleGun : Node2D
     [Export] private NodePath _hookFlightContainerPath;
 
     [Export] private float _hookExitSpeed, _maxRopeLength, _hookRetractSpeed;
-    [Export] private int _ropeSegmentCount;
+    [Export] private int _ropeSegmentCount, _aimSnapRegions;
 
     [Export] private NodePath _hookPath, _barrelPath;
 
@@ -64,15 +64,19 @@ public class GrappleGun : Node2D
 
     private void ManageInput()
     {
-        var dir = Input.GetVector
+        var raw = Input.GetVector
         (
             $"aim_{_controlDirection}_left",
             $"aim_{_controlDirection}_right",
             $"aim_{_controlDirection}_up",
             $"aim_{_controlDirection}_down"
-        ).Normalized();
+        );
 
-        if (dir != Vector2.Zero) _aim = dir;
+        if (raw != Vector2.Zero)
+        {
+            var snapAngle = Mathf.Stepify(raw.Angle(), 2 * Mathf.Pi / _aimSnapRegions);
+            _aim = Vector2.Right.Rotated(snapAngle).Normalized();
+        }
 
         _shot = Input.IsActionJustPressed($"shoot_{_controlDirection}");
         _grabbed = Input.IsActionJustPressed($"grab_{_controlDirection}");
@@ -125,6 +129,7 @@ public class GrappleGun : Node2D
             Gun.LookAt(Gun.GlobalPosition + Gun._aim);
 
             // flip the sprite about the sprite's origin by inverting its scale
+            // TODO: make the flipping symmetrical about the y axis, rather than copied across it
             Gun.Scale = Gun._aim.x < 0
                 ? LeftAimScale
                 : RightAimScale;
