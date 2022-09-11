@@ -74,8 +74,8 @@ public class GrappleGun : Node2D
 
         if (dir != Vector2.Zero) _aim = dir;
 
-        _shot = Input.IsActionPressed($"shoot_{_controlDirection}");
-        _grabbed = Input.IsActionPressed($"grab_{_controlDirection}");
+        _shot = Input.IsActionJustPressed($"shoot_{_controlDirection}");
+        _grabbed = Input.IsActionJustPressed($"grab_{_controlDirection}");
     }
 
     private void ManageState()
@@ -113,7 +113,7 @@ public class GrappleGun : Node2D
 
         public override bool ExitCondition()
         {
-            return Gun._aim != Vector2.Zero && Gun._shot && !Gun._grabbed;
+            return Gun._aim != Vector2.Zero && Gun._grabbed;
         }
 
         public override void OnEntered()
