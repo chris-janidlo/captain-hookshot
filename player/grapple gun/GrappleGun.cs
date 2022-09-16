@@ -35,6 +35,8 @@ public class GrappleGun : Node2D
         _barrel = GetNode<Node2D>(_barrelPath);
         _hookFlightContainer = GetNode<Node2D>(_hookFlightContainerPath);
 
+        _aim = Vector2.Right;
+
         var idle = new Idle(this);
         var shooting = new Shooting(this);
         var retracting = new Retracting(this);
