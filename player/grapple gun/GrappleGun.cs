@@ -24,7 +24,7 @@ public class GrappleGun : Node2D
     private Node2D _barrel, _hookFlightContainer;
 
     private State _currentState;
-    private bool _grabbed;
+    private bool _grabbed, _grabbing;
     private Hook _hook;
     private bool _shot;
     private Dictionary<State, State> _stateTransitions;
@@ -80,6 +80,7 @@ public class GrappleGun : Node2D
 
         _shot = Input.IsActionJustPressed($"shoot_{_controlDirection}");
         _grabbed = Input.IsActionJustPressed($"grab_{_controlDirection}");
+        _grabbing = Input.IsActionPressed($"grab_{_controlDirection}");
     }
 
     private void ManageState()
@@ -214,7 +215,7 @@ public class GrappleGun : Node2D
 
         public override void OnEntered()
         {
-            _hooked = Gun._grabbed && Gun._hook.TouchingHookable();
+            _hooked = Gun._grabbing && Gun._hook.TouchingHookable;
 
             _line = Gun._tautLineScene.Instance<Line2D>();
             Gun._barrel.AddChild(_line);
@@ -226,7 +227,7 @@ public class GrappleGun : Node2D
         {
             _line.SetPointPosition(1, HookPosRelativeToBarrel());
 
-            if (_hooked && !Gun._grabbed) _hooked = false;
+            if (_hooked && !Gun._grabbing) _hooked = false;
         }
 
         public override void OnPhysicsProcess()
