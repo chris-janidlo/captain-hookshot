@@ -1,5 +1,6 @@
-using System.Collections.Generic;
+using System;
 using CaptainHookshot.player.grapple_gun.rope;
+using CaptainHookshot.tools;
 using Godot;
 
 namespace CaptainHookshot.player.grapple_gun;
@@ -23,11 +24,10 @@ public class GrappleGun : Node2D
     private Vector2 _aim;
     private Node2D _barrel, _hookFlightContainer;
 
-    private State _currentState;
     private bool _grabbed, _grabbing;
     private Hook _hook;
     private bool _shot;
-    private Dictionary<State, State> _stateTransitions;
+    private StateMachine<GrappleGun> _stateMachine;
 
     public override void _Ready()
     {
@@ -37,31 +37,20 @@ public class GrappleGun : Node2D
 
         _aim = Vector2.Right;
 
-        var idle = new Idle(this);
-        var shooting = new Shooting(this);
-        var retracting = new Retracting(this);
-
-        _stateTransitions = new Dictionary<State, State>
-        {
-            { idle, shooting },
-            { shooting, retracting },
-            { retracting, idle }
-        };
-
-        _currentState = idle;
+        _stateMachine =
+            new StateMachine<GrappleGun>(this, typeof(Idle),
+                typeof(Idle), typeof(Shooting), typeof(Retracting));
     }
 
     public override void _Process(float delta)
     {
         ManageInput();
-
-        _currentState.OnProcess();
-        ManageState();
+        _stateMachine.Process(delta, ProcessType.Idle);
     }
 
     public override void _PhysicsProcess(float delta)
     {
-        _currentState.OnPhysicsProcess();
+        _stateMachine.Process(delta, ProcessType.Physics);
     }
 
     private void ManageInput()
@@ -85,182 +74,131 @@ public class GrappleGun : Node2D
         _grabbing = Input.IsActionPressed($"grab_{_controlDirection}");
     }
 
-    private void ManageState()
+    private class Idle : StateMachine<GrappleGun>.State
     {
-        if (_currentState.ExitCondition())
+        public override Type GetTransition()
         {
-            _currentState.OnExit();
-            _currentState = _stateTransitions[_currentState];
-            _currentState.OnEntered();
-        }
-    }
-
-    private abstract class State
-    {
-        protected readonly GrappleGun Gun;
-
-        protected State(GrappleGun gun)
-        {
-            Gun = gun;
+            return s._aim != Vector2.Zero && s._grabbed ? typeof(Shooting) : base.GetTransition();
         }
 
-        public abstract bool ExitCondition();
-
-        public abstract void OnEntered();
-        public abstract void OnProcess();
-        public abstract void OnPhysicsProcess();
-        public abstract void OnExit();
-    }
-
-    private class Idle : State
-    {
-        public Idle(GrappleGun gun) : base(gun)
+        public override void OnProcess(float delta)
         {
-        }
-
-        public override bool ExitCondition()
-        {
-            return Gun._aim != Vector2.Zero && Gun._grabbed;
-        }
-
-        public override void OnEntered()
-        {
-        }
-
-        public override void OnProcess()
-        {
-            Gun.LookAt(Gun.GlobalPosition + Gun._aim);
+            s.LookAt(s.GlobalPosition + s._aim);
 
             // flip the sprite about the sprite's origin by inverting its scale
             // TODO: make the flipping symmetrical about the y axis, rather than copied across it
-            Gun.Scale = Gun._aim.x < 0
+            s.Scale = s._aim.x < 0
                 ? LeftAimScale
                 : RightAimScale;
         }
-
-        public override void OnPhysicsProcess()
-        {
-        }
-
-        public override void OnExit()
-        {
-        }
     }
 
-    private class Shooting : State
+    private class Shooting : StateMachine<GrappleGun>.State
     {
         private Vector2 _hookVelocity;
         private Rope _rope;
 
-        public Shooting(GrappleGun gun) : base(gun)
+        public override Type GetTransition()
         {
+            return s._grabbed ||
+                   s._hook.GlobalPosition.DistanceSquaredTo(s._barrel.GlobalPosition) >=
+                   s._maxRopeLength * s._maxRopeLength
+                ? typeof(Retracting)
+                : base.GetTransition();
         }
 
-        public override bool ExitCondition()
-        {
-            return Gun._grabbed ||
-                   Gun._hook.GlobalPosition.DistanceSquaredTo(Gun._barrel.GlobalPosition) >=
-                   Gun._maxRopeLength * Gun._maxRopeLength;
-        }
-
-        public override void OnEntered()
+        public override void OnEnter()
         {
             // BUG: rope's connection to hook is wonky if you buffer a shoot input in a different direction after retracting 
-            _rope = Gun._ropeScene.Instance<Rope>();
-            _rope.Init(Gun._ropeSegmentCount, Gun._aim);
-            Gun._barrel.AddChild(_rope);
+            _rope = s._ropeScene.Instance<Rope>();
+            _rope.Init(s._ropeSegmentCount, s._aim);
+            s._barrel.AddChild(_rope);
 
-            var hook = Gun._hook;
+            var hook = s._hook;
 
             hook.GetParent().RemoveChild(hook);
             hook.Scale = Vector2.One;
-            Gun._hookFlightContainer.AddChild(hook);
+            s._hookFlightContainer.AddChild(hook);
             _rope.AttachEndTo(hook);
 
-            _hookVelocity = Gun._aim * Gun._hookExitSpeed;
+            _hookVelocity = s._aim * s._hookExitSpeed;
             hook.LookAt(hook.GlobalPosition + _hookVelocity);
         }
 
-        public override void OnProcess()
+        public override void OnPhysicsProcess(float delta)
         {
-        }
-
-        public override void OnPhysicsProcess()
-        {
-            Gun._hook.MoveAndSlide(_hookVelocity);
+            s._hook.MoveAndSlide(_hookVelocity);
         }
 
         public override void OnExit()
         {
-            Gun._barrel.RemoveChild(_rope);
+            s._barrel.RemoveChild(_rope);
             _rope.QueueFree();
         }
     }
 
-    private class Retracting : State
+    private class Retracting : StateMachine<GrappleGun>.State
     {
         private bool _hooked;
         private Line2D _line;
 
-        public Retracting(GrappleGun gun) : base(gun)
-        {
-        }
-
-        public override bool ExitCondition()
+        public override Type GetTransition()
         {
             Vector2
-                hookPos = Gun._hook.GlobalPosition,
-                targetPos = Gun._barrel.GlobalPosition;
-            var hookTravelPerFrame = Gun.GetPhysicsProcessDeltaTime() * Gun._hookRetractSpeed;
-            return hookPos.DistanceSquaredTo(targetPos) < hookTravelPerFrame * hookTravelPerFrame * 4;
+                hookPos = s._hook.GlobalPosition,
+                targetPos = s._barrel.GlobalPosition;
+            var hookTravelPerFrame = s.GetPhysicsProcessDeltaTime() * s._hookRetractSpeed;
+            return hookPos.DistanceSquaredTo(targetPos) < hookTravelPerFrame * hookTravelPerFrame * 4
+                ? typeof(Idle)
+                : base.GetTransition();
         }
 
-        public override void OnEntered()
+        public override void OnEnter()
         {
-            _hooked = Gun._grabbing && Gun._hook.TouchingHookable;
+            _hooked = s._grabbing && s._hook.TouchingHookable;
 
-            _line = Gun._tautLineScene.Instance<Line2D>();
-            Gun._barrel.AddChild(_line);
+            _line = s._tautLineScene.Instance<Line2D>();
+            s._barrel.AddChild(_line);
             _line.AddPoint(Vector2.Zero);
             _line.AddPoint(HookPosRelativeToBarrel());
         }
 
-        public override void OnProcess()
+        public override void OnProcess(float delta)
         {
             _line.SetPointPosition(1, HookPosRelativeToBarrel());
 
-            if (_hooked && !Gun._grabbing) _hooked = false;
+            if (_hooked && !s._grabbing) _hooked = false;
         }
 
-        public override void OnPhysicsProcess()
+        public override void OnPhysicsProcess(float delta)
         {
-            var hook = Gun._hook;
+            var hook = s._hook;
             if (_hooked)
             {
                 // TODO
             }
             else
             {
-                var dir = hook.GlobalPosition.DirectionTo(Gun._barrel.GlobalPosition);
-                hook.MoveAndSlide(dir * Gun._hookRetractSpeed);
+                var dir = hook.GlobalPosition.DirectionTo(s._barrel.GlobalPosition);
+                hook.MoveAndSlide(dir * s._hookRetractSpeed);
             }
         }
 
         public override void OnExit()
         {
-            Gun._barrel.RemoveChild(_line);
+            s._barrel.RemoveChild(_line);
             _line.QueueFree();
 
-            var hook = Gun._hook;
+            var hook = s._hook;
             hook.GetParent().RemoveChild(hook);
-            Gun._barrel.AddChild(hook);
+            s._barrel.AddChild(hook);
             hook.Position = Vector2.Zero;
             hook.Rotation = 0;
         }
 
         private Vector2 HookPosRelativeToBarrel()
         {
-            return Gun._barrel.ToLocal(Gun._hook.GlobalPosition);
+            return s._barrel.ToLocal(s._hook.GlobalPosition);
         }
     }
 }
