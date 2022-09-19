@@ -13,7 +13,8 @@ public class GrappleGun : Node2D
 
     [Export] private NodePath _hookFlightContainerPath;
 
-    [Export] private float _hookExitSpeed, _maxRopeLength, _hookRetractSpeed;
+    [Export] private float _hookExitSpeed, _maxRopeLength, _hookRetractSpeed, _hookPullAccel;
+    [Export(PropertyHint.Range, "0,1")] private float _hookCorrectionAmount;
     [Export] private int _ropeSegmentCount, _aimSnapRegions;
 
     [Export] private NodePath _hookPath, _barrelPath;
@@ -22,12 +23,13 @@ public class GrappleGun : Node2D
 
     private Vector2 _aim;
     private Node2D _barrel, _hookFlightContainer;
-
     private State _currentState;
-    private bool _grabbed, _grabbing;
+    private bool _grabbed, _grabbing, _shot;
     private Hook _hook;
-    private bool _shot;
+    private PhysicsReport _playerPhysicsReport;
     private Dictionary<State, State> _stateTransitions;
+
+    public Vector2 PullAcceleration { get; private set; }
 
     public override void _Ready()
     {
@@ -55,13 +57,19 @@ public class GrappleGun : Node2D
     {
         ManageInput();
 
-        _currentState.OnProcess();
+        _currentState.OnProcess(delta);
         ManageState();
     }
 
     public override void _PhysicsProcess(float delta)
     {
-        _currentState.OnPhysicsProcess();
+        _currentState.OnPhysicsProcess(delta);
+        ManageState();
+    }
+
+    public void UpdatePhysicsReport(PhysicsReport report)
+    {
+        _playerPhysicsReport = report;
     }
 
     private void ManageInput()
@@ -107,8 +115,8 @@ public class GrappleGun : Node2D
         public abstract bool ExitCondition();
 
         public abstract void OnEntered();
-        public abstract void OnProcess();
-        public abstract void OnPhysicsProcess();
+        public abstract void OnProcess(float delta);
+        public abstract void OnPhysicsProcess(float delta);
         public abstract void OnExit();
     }
 
@@ -127,7 +135,7 @@ public class GrappleGun : Node2D
         {
         }
 
-        public override void OnProcess()
+        public override void OnProcess(float delta)
         {
             Gun.LookAt(Gun.GlobalPosition + Gun._aim);
 
@@ -138,7 +146,7 @@ public class GrappleGun : Node2D
                 : RightAimScale;
         }
 
-        public override void OnPhysicsProcess()
+        public override void OnPhysicsProcess(float delta)
         {
         }
 
@@ -150,6 +158,7 @@ public class GrappleGun : Node2D
     private class Shooting : State
     {
         private Vector2 _hookVelocity;
+        private int _retractFrameDelay;
         private Rope _rope;
 
         public Shooting(GrappleGun gun) : base(gun)
@@ -158,9 +167,10 @@ public class GrappleGun : Node2D
 
         public override bool ExitCondition()
         {
-            return Gun._grabbed ||
-                   Gun._hook.GlobalPosition.DistanceSquaredTo(Gun._barrel.GlobalPosition) >=
-                   Gun._maxRopeLength * Gun._maxRopeLength;
+            return _retractFrameDelay <= 0 &&
+                   (Gun._grabbed ||
+                    Gun._hook.GlobalPosition.DistanceSquaredTo(Gun._barrel.GlobalPosition) >=
+                    Gun._maxRopeLength * Gun._maxRopeLength);
         }
 
         public override void OnEntered()
@@ -179,15 +189,18 @@ public class GrappleGun : Node2D
 
             _hookVelocity = Gun._aim * Gun._hookExitSpeed;
             hook.LookAt(hook.GlobalPosition + _hookVelocity);
+
+            _retractFrameDelay = 3;
         }
 
-        public override void OnProcess()
+        public override void OnProcess(float delta)
         {
         }
 
-        public override void OnPhysicsProcess()
+        public override void OnPhysicsProcess(float delta)
         {
             Gun._hook.MoveAndSlide(_hookVelocity);
+            _retractFrameDelay--;
         }
 
         public override void OnExit()
@@ -208,6 +221,8 @@ public class GrappleGun : Node2D
 
         public override bool ExitCondition()
         {
+            if (_hooked) return false;
+
             Vector2
                 hookPos = Gun._hook.GlobalPosition,
                 targetPos = Gun._barrel.GlobalPosition;
@@ -225,24 +240,32 @@ public class GrappleGun : Node2D
             _line.AddPoint(HookPosRelativeToBarrel());
         }
 
-        public override void OnProcess()
+        public override void OnProcess(float delta)
         {
             _line.SetPointPosition(1, HookPosRelativeToBarrel());
 
             if (_hooked && !Gun._grabbing) _hooked = false;
         }
 
-        public override void OnPhysicsProcess()
+        public override void OnPhysicsProcess(float delta)
         {
             var hook = Gun._hook;
-            if (_hooked)
+            var barrel = Gun._barrel;
+            if (!_hooked)
             {
-                // TODO
+                Gun.PullAcceleration = Vector2.Zero;
+                var hookToGun = hook.GlobalPosition.DirectionTo(barrel.GlobalPosition);
+                hook.MoveAndSlide(hookToGun * Gun._hookRetractSpeed);
             }
             else
             {
-                var dir = hook.GlobalPosition.DirectionTo(Gun._barrel.GlobalPosition);
-                hook.MoveAndSlide(dir * Gun._hookRetractSpeed);
+                var playerPhysics = Gun._playerPhysicsReport;
+                var heading = hook.GlobalPosition - playerPhysics.Position;
+                var dir = heading.Normalized();
+                var velPerpendicularToDir = heading - playerPhysics.Velocity.Project(heading);
+                var velCorrection = velPerpendicularToDir.Reflect(dir).Normalized();
+                var correctedDir = dir.Slerp(velCorrection, Gun._hookCorrectionAmount);
+                Gun.PullAcceleration = correctedDir * Gun._hookPullAccel * delta;
             }
         }
 
@@ -256,6 +279,8 @@ public class GrappleGun : Node2D
             Gun._barrel.AddChild(hook);
             hook.Position = Vector2.Zero;
             hook.Rotation = 0;
+
+            Gun.PullAcceleration = Vector2.Zero;
         }
 
         private Vector2 HookPosRelativeToBarrel()

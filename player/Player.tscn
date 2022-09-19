@@ -1,12 +1,19 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://player/Player.png" type="Texture" id=1]
 [ext_resource path="res://player/grapple gun/Grapple Gun.tscn" type="PackedScene" id=2]
+[ext_resource path="res://player/Player.cs" type="Script" id=3]
 
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 2.5, 6.5 )
 
 [node name="Player System" type="Node2D"]
+script = ExtResource( 3 )
+_gravityAccel = 500.0
+_drag = 0.05
+_leftGunPath = NodePath("Body/Grapple Gun Left")
+_rightGunPath = NodePath("Body/Grapple Gun Right")
+_bodyPath = NodePath("Body")
 
 [node name="Body" type="KinematicBody2D" parent="."]
 
