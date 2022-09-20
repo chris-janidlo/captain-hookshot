@@ -183,7 +183,6 @@ public class GrappleGun : Node2D
         public override void OnProcessFrame(float delta)
         {
             _line.SetPointPosition(1, HookPosRelativeToBarrel());
-
             if (_hooked && !C._grabbing) _hooked = false;
         }
 
@@ -200,8 +199,9 @@ public class GrappleGun : Node2D
             else
             {
                 var heading = hook.GlobalPosition - barrel.GlobalPosition;
-                var velPerpendicularToHeading = heading - C._playerPhysicsReport.Velocity.Project(heading);
-                C.PullAcceleration = C._hookPullAccel * delta * (heading + velPerpendicularToHeading).Normalized();
+                var velocity = C._playerPhysicsReport.Velocity;
+                var velPerpendicularToHeading = velocity - velocity.Project(heading);
+                C.PullAcceleration = C._hookPullAccel * delta * (heading - velPerpendicularToHeading).Normalized();
             }
         }
 
