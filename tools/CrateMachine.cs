@@ -51,6 +51,13 @@ public struct CrateMachine<TParent>
         DoTransition(_currentCrate.GetTransition());
     }
 
+    public void CustomCall<TInterface>(Action<TInterface> call)
+    {
+        if (_currentCrate is not TInterface @interface) return;
+
+        call(@interface);
+    }
+
     private void DoTransition(Type newCrateType)
     {
         if (newCrateType is null) return;
