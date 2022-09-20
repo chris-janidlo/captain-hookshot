@@ -1,5 +1,6 @@
-using System.Collections.Generic;
+using System;
 using CaptainHookshot.player.grapple_gun.rope;
+using CaptainHookshot.tools;
 using Godot;
 
 namespace CaptainHookshot.player.grapple_gun;
@@ -23,11 +24,10 @@ public class GrappleGun : Node2D
 
     private Vector2 _aim;
     private Node2D _barrel, _hookFlightContainer;
-    private State _currentState;
+    private CrateMachine<GrappleGun> _crateMachine;
     private bool _grabbed, _grabbing, _shot;
     private Hook _hook;
     private PhysicsReport _playerPhysicsReport;
-    private Dictionary<State, State> _stateTransitions;
 
     public Vector2 PullAcceleration { get; private set; }
 
@@ -39,32 +39,22 @@ public class GrappleGun : Node2D
 
         _aim = Vector2.Right;
 
-        var idle = new Idle(this);
-        var shooting = new Shooting(this);
-        var retracting = new Retracting(this);
-
-        _stateTransitions = new Dictionary<State, State>
-        {
-            { idle, shooting },
-            { shooting, retracting },
-            { retracting, idle }
-        };
-
-        _currentState = idle;
+        _crateMachine = new CrateMachine<GrappleGun>(this)
+            .SetInitialCrate<Idle>()
+            .AddCrate(new Idle())
+            .AddCrate(new Shooting())
+            .AddCrate(new Retracting());
     }
 
     public override void _Process(float delta)
     {
         ManageInput();
-
-        _currentState.OnProcess(delta);
-        ManageState();
+        _crateMachine.Process(delta, ProcessType.Frame);
     }
 
     public override void _PhysicsProcess(float delta)
     {
-        _currentState.OnPhysicsProcess(delta);
-        ManageState();
+        _crateMachine.Process(delta, ProcessType.Physics);
     }
 
     public void UpdatePhysicsReport(PhysicsReport report)
@@ -93,199 +83,149 @@ public class GrappleGun : Node2D
         _grabbing = Input.IsActionPressed($"grab_{_controlDirection}");
     }
 
-    private void ManageState()
+    private class Idle : Crate<GrappleGun>
     {
-        if (_currentState.ExitCondition())
+        public override Type GetTransition()
         {
-            _currentState.OnExit();
-            _currentState = _stateTransitions[_currentState];
-            _currentState.OnEntered();
-        }
-    }
-
-    private abstract class State
-    {
-        protected readonly GrappleGun Gun;
-
-        protected State(GrappleGun gun)
-        {
-            Gun = gun;
+            return C._aim != Vector2.Zero && C._grabbed ? typeof(Shooting) : base.GetTransition();
         }
 
-        public abstract bool ExitCondition();
-
-        public abstract void OnEntered();
-        public abstract void OnProcess(float delta);
-        public abstract void OnPhysicsProcess(float delta);
-        public abstract void OnExit();
-    }
-
-    private class Idle : State
-    {
-        public Idle(GrappleGun gun) : base(gun)
+        public override void OnProcessFrame(float delta)
         {
-        }
-
-        public override bool ExitCondition()
-        {
-            return Gun._aim != Vector2.Zero && Gun._grabbed;
-        }
-
-        public override void OnEntered()
-        {
-        }
-
-        public override void OnProcess(float delta)
-        {
-            Gun.LookAt(Gun.GlobalPosition + Gun._aim);
+            C.LookAt(C.GlobalPosition + C._aim);
 
             // flip the sprite about the sprite's origin by inverting its scale
             // TODO: make the flipping symmetrical about the y axis, rather than copied across it
-            Gun.Scale = Gun._aim.x < 0
+            C.Scale = C._aim.x < 0
                 ? LeftAimScale
                 : RightAimScale;
         }
-
-        public override void OnPhysicsProcess(float delta)
-        {
-        }
-
-        public override void OnExit()
-        {
-        }
     }
 
-    private class Shooting : State
+    private class Shooting : Crate<GrappleGun>
     {
         private Vector2 _hookVelocity;
         private int _retractFrameDelay;
         private Rope _rope;
 
-        public Shooting(GrappleGun gun) : base(gun)
+        public override Type GetTransition()
         {
+            if (_retractFrameDelay > 0) return base.GetTransition();
+
+            return C._grabbed ||
+                   C._hook.GlobalPosition.DistanceSquaredTo(C._barrel.GlobalPosition) >=
+                   C._maxRopeLength * C._maxRopeLength
+                ? typeof(Retracting)
+                : base.GetTransition();
         }
 
-        public override bool ExitCondition()
-        {
-            return _retractFrameDelay <= 0 &&
-                   (Gun._grabbed ||
-                    Gun._hook.GlobalPosition.DistanceSquaredTo(Gun._barrel.GlobalPosition) >=
-                    Gun._maxRopeLength * Gun._maxRopeLength);
-        }
-
-        public override void OnEntered()
+        public override void OnEnter()
         {
             // BUG: rope's connection to hook is wonky if you buffer a shoot input in a different direction after retracting 
-            _rope = Gun._ropeScene.Instance<Rope>();
-            _rope.Init(Gun._ropeSegmentCount, Gun._aim);
-            Gun._barrel.AddChild(_rope);
+            _rope = C._ropeScene.Instance<Rope>();
+            _rope.Init(C._ropeSegmentCount, C._aim);
+            C._barrel.AddChild(_rope);
 
-            var hook = Gun._hook;
+            var hook = C._hook;
 
             hook.GetParent().RemoveChild(hook);
             hook.Scale = Vector2.One;
-            Gun._hookFlightContainer.AddChild(hook);
+            C._hookFlightContainer.AddChild(hook);
             _rope.AttachEndTo(hook);
 
-            _hookVelocity = Gun._aim * Gun._hookExitSpeed;
+            _hookVelocity = C._aim * C._hookExitSpeed;
             hook.LookAt(hook.GlobalPosition + _hookVelocity);
 
             _retractFrameDelay = 3;
         }
 
-        public override void OnProcess(float delta)
+        public override void OnProcessPhysics(float delta)
         {
-        }
-
-        public override void OnPhysicsProcess(float delta)
-        {
-            Gun._hook.MoveAndSlide(_hookVelocity);
+            C._hook.MoveAndSlide(_hookVelocity);
             _retractFrameDelay--;
         }
 
         public override void OnExit()
         {
-            Gun._barrel.RemoveChild(_rope);
+            C._barrel.RemoveChild(_rope);
             _rope.QueueFree();
         }
     }
 
-    private class Retracting : State
+    private class Retracting : Crate<GrappleGun>
     {
         private bool _hooked;
         private Line2D _line;
 
-        public Retracting(GrappleGun gun) : base(gun)
+        public override Type GetTransition()
         {
-        }
-
-        public override bool ExitCondition()
-        {
-            if (_hooked) return false;
+            if (_hooked) return base.GetTransition();
 
             Vector2
-                hookPos = Gun._hook.GlobalPosition,
-                targetPos = Gun._barrel.GlobalPosition;
-            var hookTravelPerFrame = Gun.GetPhysicsProcessDeltaTime() * Gun._hookRetractSpeed;
-            return hookPos.DistanceSquaredTo(targetPos) < hookTravelPerFrame * hookTravelPerFrame * 4;
+                hookPos = C._hook.GlobalPosition,
+                targetPos = C._barrel.GlobalPosition;
+            var hookTravelPerFrame = C.GetPhysicsProcessDeltaTime() * C._hookRetractSpeed;
+            return hookPos.DistanceSquaredTo(targetPos) < hookTravelPerFrame * hookTravelPerFrame * 4
+                ? typeof(Idle)
+                : base.GetTransition();
         }
 
-        public override void OnEntered()
+        public override void OnEnter()
         {
-            _hooked = Gun._grabbing && Gun._hook.TouchingHookable;
+            _hooked = C._grabbing && C._hook.TouchingHookable;
 
-            _line = Gun._tautLineScene.Instance<Line2D>();
-            Gun._barrel.AddChild(_line);
+            _line = C._tautLineScene.Instance<Line2D>();
+            C._barrel.AddChild(_line);
             _line.AddPoint(Vector2.Zero);
             _line.AddPoint(HookPosRelativeToBarrel());
         }
 
-        public override void OnProcess(float delta)
+        public override void OnProcessFrame(float delta)
         {
             _line.SetPointPosition(1, HookPosRelativeToBarrel());
 
-            if (_hooked && !Gun._grabbing) _hooked = false;
+            if (_hooked && !C._grabbing) _hooked = false;
         }
 
-        public override void OnPhysicsProcess(float delta)
+        public override void OnProcessPhysics(float delta)
         {
-            var hook = Gun._hook;
-            var barrel = Gun._barrel;
+            var hook = C._hook;
+            var barrel = C._barrel;
             if (!_hooked)
             {
-                Gun.PullAcceleration = Vector2.Zero;
+                C.PullAcceleration = Vector2.Zero;
                 var hookToGun = hook.GlobalPosition.DirectionTo(barrel.GlobalPosition);
-                hook.MoveAndSlide(hookToGun * Gun._hookRetractSpeed);
+                hook.MoveAndSlide(hookToGun * C._hookRetractSpeed);
             }
             else
             {
-                var playerPhysics = Gun._playerPhysicsReport;
+                var playerPhysics = C._playerPhysicsReport;
                 var heading = hook.GlobalPosition - playerPhysics.Position;
                 var dir = heading.Normalized();
                 var velPerpendicularToDir = heading - playerPhysics.Velocity.Project(heading);
                 var velCorrection = velPerpendicularToDir.Reflect(dir).Normalized();
-                var correctedDir = dir.Slerp(velCorrection, Gun._hookCorrectionAmount);
-                Gun.PullAcceleration = correctedDir * Gun._hookPullAccel * delta;
+                var correctedDir = dir.Slerp(velCorrection, C._hookCorrectionAmount);
+                C.PullAcceleration = correctedDir * C._hookPullAccel * delta;
             }
         }
 
         public override void OnExit()
         {
-            Gun._barrel.RemoveChild(_line);
+            C._barrel.RemoveChild(_line);
             _line.QueueFree();
 
-            var hook = Gun._hook;
+            var hook = C._hook;
             hook.GetParent().RemoveChild(hook);
-            Gun._barrel.AddChild(hook);
+            C._barrel.AddChild(hook);
             hook.Position = Vector2.Zero;
             hook.Rotation = 0;
 
-            Gun.PullAcceleration = Vector2.Zero;
+            C.PullAcceleration = Vector2.Zero;
         }
 
         private Vector2 HookPosRelativeToBarrel()
         {
-            return Gun._barrel.ToLocal(Gun._hook.GlobalPosition);
+            return C._barrel.ToLocal(C._hook.GlobalPosition);
         }
     }
 }
