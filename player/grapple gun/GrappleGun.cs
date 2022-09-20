@@ -193,19 +193,15 @@ public class GrappleGun : Node2D
             var barrel = C._barrel;
             if (!_hooked)
             {
-                C.PullAcceleration = Vector2.Zero;
                 var hookToGun = hook.GlobalPosition.DirectionTo(barrel.GlobalPosition);
                 hook.MoveAndSlide(hookToGun * C._hookRetractSpeed);
+                C.PullAcceleration = Vector2.Zero;
             }
             else
             {
-                var playerPhysics = C._playerPhysicsReport;
-                var heading = hook.GlobalPosition - playerPhysics.Position;
-                var dir = heading.Normalized();
-                var velPerpendicularToDir = heading - playerPhysics.Velocity.Project(heading);
-                var velCorrection = velPerpendicularToDir.Reflect(dir).Normalized();
-                var correctedDir = dir.Slerp(velCorrection, C._hookCorrectionAmount);
-                C.PullAcceleration = correctedDir * C._hookPullAccel * delta;
+                var heading = hook.GlobalPosition - barrel.GlobalPosition;
+                var velPerpendicularToHeading = heading - C._playerPhysicsReport.Velocity.Project(heading);
+                C.PullAcceleration = C._hookPullAccel * delta * (heading + velPerpendicularToHeading).Normalized();
             }
         }
 
