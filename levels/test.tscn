@@ -8,5 +8,17 @@
 [node name="Small Ship" parent="." instance=ExtResource( 2 )]
 position = Vector2( 155, 44 )
 
+[node name="Small Ship2" parent="." instance=ExtResource( 2 )]
+position = Vector2( 89, 215 )
+
+[node name="Small Ship3" parent="." instance=ExtResource( 2 )]
+position = Vector2( 32, 155 )
+
+[node name="Small Ship4" parent="." instance=ExtResource( 2 )]
+position = Vector2( 160, 164 )
+
+[node name="Small Ship5" parent="." instance=ExtResource( 2 )]
+position = Vector2( 36, 70 )
+
 [node name="Player" parent="." instance=ExtResource( 1 )]
 position = Vector2( 77, 59 )
