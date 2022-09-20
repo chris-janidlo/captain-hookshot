@@ -9,8 +9,8 @@ extents = Vector2( 2.5, 6.5 )
 
 [node name="Player System" type="Node2D"]
 script = ExtResource( 3 )
-_gravityAccel = 500.0
-_drag = 0.05
+_gravityAccel = 125.0
+_drag = 0.005
 _leftGunPath = NodePath("Body/Grapple Gun Left")
 _rightGunPath = NodePath("Body/Grapple Gun Right")
 _bodyPath = NodePath("Body")
