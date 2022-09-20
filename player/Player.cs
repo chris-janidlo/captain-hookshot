@@ -8,6 +8,9 @@ public class Player : Node2D
     [Export] private float _gravityAccel, _drag;
     [Export] private NodePath _leftGunPath, _rightGunPath, _bodyPath;
 
+    [Export] private float _killFloor;
+    [Export] private bool _debugRespwanMode;
+
     private KinematicBody2D _body;
 
     private GrappleGun _leftGun, _rightGun;
@@ -34,6 +37,17 @@ public class Player : Node2D
         _velocity -= _velocity.Normalized() * _velocity.LengthSquared() * _drag * delta;
 
         _body.MoveAndCollide(_velocity * delta);
+
+        if (_body.GlobalPosition.y > _killFloor)
+        {
+            GD.Print("you died"); // TODO
+            if (_debugRespwanMode)
+            {
+                _body.Position = Vector2.Zero;
+                _velocity = Vector2.Zero;
+                oldVelocity = Vector2.Zero; // to prevent weirdness with physics reports to guns
+            }
+        }
 
         var report = new PhysicsReport
         {

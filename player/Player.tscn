@@ -14,6 +14,7 @@ _drag = 0.005
 _leftGunPath = NodePath("Body/Grapple Gun Left")
 _rightGunPath = NodePath("Body/Grapple Gun Right")
 _bodyPath = NodePath("Body")
+_killFloor = 260.0
 
 [node name="Body" type="KinematicBody2D" parent="."]
 
