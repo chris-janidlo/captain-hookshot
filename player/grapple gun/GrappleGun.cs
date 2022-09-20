@@ -14,7 +14,7 @@ public class GrappleGun : Node2D
 
     [Export] private NodePath _hookFlightContainerPath;
 
-    [Export] private float _hookExitSpeed, _maxRopeLength, _hookRetractSpeed, _hookPullAccel;
+    [Export] private float _hookExitSpeed, _maxRopeLength, _hookRetractSpeed, _hookRetractCooldown, _hookPullAccel;
     [Export] private int _ropeSegmentCount, _aimSnapRegions;
 
     [Export] private NodePath _hookPath, _barrelPath;
@@ -86,7 +86,7 @@ public class GrappleGun : Node2D
     {
         public override Type GetTransition()
         {
-            return C._aim != Vector2.Zero && C._grabbed ? typeof(Shooting) : base.GetTransition();
+            return C._grabbing ? typeof(Shooting) : base.GetTransition();
         }
 
         public override void OnProcessFrame(float delta)
@@ -103,17 +103,21 @@ public class GrappleGun : Node2D
 
     private class Shooting : Crate<GrappleGun>
     {
+        private float _cooldownTimer;
         private Vector2 _hookVelocity;
-        private int _retractFrameDelay;
         private Rope _rope;
 
         public override Type GetTransition()
         {
-            if (_retractFrameDelay > 0) return base.GetTransition();
+            // TODO: should this be based on ignoring any initial area touching the hook, instead of time?
+            var coolingDown = _cooldownTimer > 0;
+            var manualRetract = !coolingDown && C._grabbed;
+            var autoRetract =
+                C._hook.GlobalPosition.DistanceSquaredTo(C._barrel.GlobalPosition) >=
+                C._maxRopeLength * C._maxRopeLength;
+            var hooked = !coolingDown && C._grabbing && C._hook.TouchingHookable;
 
-            return C._grabbed ||
-                   C._hook.GlobalPosition.DistanceSquaredTo(C._barrel.GlobalPosition) >=
-                   C._maxRopeLength * C._maxRopeLength
+            return manualRetract || autoRetract || hooked
                 ? typeof(Retracting)
                 : base.GetTransition();
         }
@@ -135,13 +139,13 @@ public class GrappleGun : Node2D
             _hookVelocity = C._aim * C._hookExitSpeed;
             hook.LookAt(hook.GlobalPosition + _hookVelocity);
 
-            _retractFrameDelay = 3;
+            _cooldownTimer = C._hookRetractCooldown;
         }
 
         public override void OnProcessPhysics(float delta)
         {
             C._hook.MoveAndSlide(_hookVelocity);
-            _retractFrameDelay--;
+            _cooldownTimer -= delta;
         }
 
         public override void OnExit()
