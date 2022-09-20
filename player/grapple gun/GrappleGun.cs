@@ -157,18 +157,12 @@ public class GrappleGun : Node2D
 
     private class Retracting : Crate<GrappleGun>
     {
-        private bool _hooked;
+        private bool _hooked, _withinSnapDistance;
         private Line2D _line;
 
         public override Type GetTransition()
         {
-            if (_hooked) return base.GetTransition();
-
-            Vector2
-                hookPos = C._hook.GlobalPosition,
-                targetPos = C._barrel.GlobalPosition;
-            var hookTravelPerFrame = C.GetPhysicsProcessDeltaTime() * C._hookRetractSpeed;
-            return hookPos.DistanceSquaredTo(targetPos) < hookTravelPerFrame * hookTravelPerFrame * 4
+            return !_hooked && _withinSnapDistance
                 ? typeof(Idle)
                 : base.GetTransition();
         }
@@ -185,26 +179,28 @@ public class GrappleGun : Node2D
 
         public override void OnProcessFrame(float delta)
         {
+            ManageStateFlags();
             _line.SetPointPosition(1, HookPosRelativeToBarrel());
-            if (_hooked && !C._grabbing) _hooked = false;
         }
 
         public override void OnProcessPhysics(float delta)
         {
+            ManageStateFlags();
+
             var hook = C._hook;
             var barrel = C._barrel;
-            if (!_hooked)
+            if (_hooked)
+            {
+                var velocity = C._playerPhysicsReport.Velocity;
+                var heading = hook.GlobalPosition - barrel.GlobalPosition;
+                var velPerpendicularToHeading = velocity - velocity.Project(heading);
+                C.PullAcceleration = C._hookPullAccel * delta * (heading - velPerpendicularToHeading).Normalized();
+            }
+            else
             {
                 var hookToGun = hook.GlobalPosition.DirectionTo(barrel.GlobalPosition);
                 hook.MoveAndSlide(hookToGun * C._hookRetractSpeed);
                 C.PullAcceleration = Vector2.Zero;
-            }
-            else
-            {
-                var heading = hook.GlobalPosition - barrel.GlobalPosition;
-                var velocity = C._playerPhysicsReport.Velocity;
-                var velPerpendicularToHeading = velocity - velocity.Project(heading);
-                C.PullAcceleration = C._hookPullAccel * delta * (heading - velPerpendicularToHeading).Normalized();
             }
         }
 
@@ -220,6 +216,16 @@ public class GrappleGun : Node2D
             hook.Rotation = 0;
 
             C.PullAcceleration = Vector2.Zero;
+        }
+
+        private void ManageStateFlags()
+        {
+            if (_hooked && !C._grabbing) _hooked = false;
+
+            var hookTravelPerFrame = C.GetPhysicsProcessDeltaTime() * C._hookRetractSpeed;
+            _withinSnapDistance =
+                C._hook.GlobalPosition.DistanceSquaredTo(C._barrel.GlobalPosition) <
+                hookTravelPerFrame * hookTravelPerFrame * 4;
         }
 
         private Vector2 HookPosRelativeToBarrel()
