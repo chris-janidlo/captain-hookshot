@@ -15,7 +15,6 @@ public class GrappleGun : Node2D
     [Export] private NodePath _hookFlightContainerPath;
 
     [Export] private float _hookExitSpeed, _maxRopeLength, _hookRetractSpeed, _hookPullAccel;
-    [Export(PropertyHint.Range, "0,1")] private float _hookCorrectionAmount;
     [Export] private int _ropeSegmentCount, _aimSnapRegions;
 
     [Export] private NodePath _hookPath, _barrelPath;
