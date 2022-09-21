@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CaptainHookshot.player.grapple_gun.rope;
 using CaptainHookshot.tools;
 using Godot;
@@ -43,7 +44,8 @@ public class GrappleGun : Node2D
             .SetInitialCrate<Idle>()
             .AddCrate(new Idle())
             .AddCrate(new Shooting())
-            .AddCrate(new Retracting());
+            .AddCrate(new Retracting())
+            .AddCrate(new LooseRope());
     }
 
     public override void _Process(float delta)
@@ -104,23 +106,31 @@ public class GrappleGun : Node2D
 
     private class Shooting : Crate<GrappleGun>
     {
+        private readonly List<(Func<bool>, Type)> _transitions;
+        private bool _atEndOfRope;
         private float _cooldownTimer;
         private Vector2 _hookVelocity;
         private Rope _rope;
 
+        public Shooting()
+        {
+            _transitions = new List<(Func<bool>, Type)>
+            {
+                (() => _atEndOfRope && C._grabbing, typeof(LooseRope)),
+                (() => _atEndOfRope && !C._grabbing, typeof(Retracting)),
+                (() => _cooldownTimer <= 0 && C._grabbing && C._hook.TouchingHookable, typeof(Retracting)),
+                (() => _cooldownTimer <= 0 && C._grabbed, typeof(Shooting))
+            };
+        }
+
         public override Type GetTransition()
         {
-            // TODO: should this be based on ignoring any initial area touching the hook, instead of time?
-            var coolingDown = _cooldownTimer > 0;
-            var manualRetract = !coolingDown && C._grabbed;
-            var autoRetract =
-                C._hook.GlobalPosition.DistanceSquaredTo(C._barrel.GlobalPosition) >=
-                C._maxRopeLength * C._maxRopeLength;
-            var hooked = !coolingDown && C._grabbing && C._hook.TouchingHookable;
+            // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
+            foreach (var t in _transitions)
+                if (t.Item1())
+                    return t.Item2;
 
-            return manualRetract || autoRetract || hooked
-                ? typeof(Retracting)
-                : base.GetTransition();
+            return base.GetTransition();
         }
 
         public override void OnEnter()
@@ -134,6 +144,7 @@ public class GrappleGun : Node2D
 
             hook.GetParent().RemoveChild(hook);
             hook.Scale = Vector2.One;
+            hook.GlobalPosition = C._barrel.GlobalPosition;
             C._hookFlightContainer.AddChild(hook);
             _rope.AttachEndTo(hook);
 
@@ -147,6 +158,9 @@ public class GrappleGun : Node2D
         {
             C._hook.MoveAndSlide(_hookVelocity);
             _cooldownTimer -= delta;
+
+            _atEndOfRope = C._hook.GlobalPosition.DistanceSquaredTo(C._barrel.GlobalPosition) >=
+                           C._maxRopeLength * C._maxRopeLength;
         }
 
         public override void OnExit()
@@ -242,6 +256,15 @@ public class GrappleGun : Node2D
         private Vector2 HookPosRelativeToBarrel()
         {
             return C._barrel.ToLocal(C._hook.GlobalPosition);
+        }
+    }
+
+    private class LooseRope : Crate<GrappleGun>
+    {
+        // TODO: implement this class
+        public override Type GetTransition()
+        {
+            return typeof(Shooting);
         }
     }
 }
