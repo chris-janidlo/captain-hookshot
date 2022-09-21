@@ -10,13 +10,13 @@
 [node name="Grapple Gun" type="Node2D"]
 script = ExtResource( 1 )
 _hookExitSpeed = 450.0
-_maxRopeLength = 300.0
-_hookRetractSpeed = 1600.0
+_maxRopeLength = 150.0
+_hookRetractSpeed = 1000.0
 _hookRetractCooldown = 0.1
 _hookPullAccel = 1000.0
-_hookPullStopDistance = 0.5
+_hookPullStopDistance = 0.7
 _ropeSegmentCount = 30
-_aimSnapRegions = 8
+_aimSnapRegions = 16
 _hookPath = NodePath("Sprite/Barrel/Hook")
 _barrelPath = NodePath("Sprite/Barrel")
 _ropeScene = ExtResource( 2 )
