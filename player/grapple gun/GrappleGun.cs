@@ -8,7 +8,7 @@ namespace CaptainHookshot.player.grapple_gun;
 
 public class GrappleGun : Node2D
 {
-    private static readonly Vector2 LeftAimScale = new(1, -1), RightAimScale = new(1, 1);
+    private static readonly Vector2 FlippedYScale = new(1, -1), UnflippedYScale = new(1, 1);
 
     [Export(PropertyHint.Enum, "left,right")]
     private string _controlDirection;
@@ -96,11 +96,13 @@ public class GrappleGun : Node2D
         {
             C.LookAt(C.GlobalPosition + C._aim);
 
-            // flip the sprite about the sprite's origin by inverting its scale
-            // TODO: make the flipping symmetrical about the y axis, rather than copied across it
-            C.Scale = C._aim.x < 0
-                ? LeftAimScale
-                : RightAimScale;
+            const float up = Mathf.Pi / 2;
+            var flip = C._controlDirection == "left"
+                ? C._aim.Angle() is < -up or >= up
+                : C._aim.Angle() is <= -up or > up;
+
+            // flip the sprite about its origin by inverting its scale
+            C.Scale = flip ? FlippedYScale : UnflippedYScale;
         }
     }
 
