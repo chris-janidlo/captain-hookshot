@@ -219,7 +219,7 @@ public class GrappleGun : Node2D
             switch (_hooked)
             {
                 case true when atHook:
-                    C.PullAcceleration = -velocity;
+                    C.PullAcceleration = -velocity / delta;
                     break;
 
                 case true when !atHook:

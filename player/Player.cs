@@ -35,10 +35,11 @@ public class Player : Node2D
     {
         _lastFrameVelocity = _velocity;
 
-        _velocity +=
+        _velocity += (
             _leftGun.PullAcceleration +
             _rightGun.PullAcceleration +
-            _gravityAccel * delta * Vector2.Down;
+            _gravityAccel * Vector2.Down
+        ) * delta;
 
         // separate step so that drag is always up to date
         _velocity -= _velocity.Normalized() * _velocity.LengthSquared() * _drag * delta;
