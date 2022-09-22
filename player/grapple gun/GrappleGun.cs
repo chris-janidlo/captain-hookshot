@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using CaptainHookshot.player.grapple_gun.rope;
 using CaptainHookshot.tools;
 using Godot;
@@ -108,31 +107,28 @@ public class GrappleGun : Node2D
 
     private class Shooting : Crate<GrappleGun>
     {
-        private readonly List<(Func<bool>, Type)> _transitions;
         private bool _atEndOfRope;
         private float _cooldownTimer;
         private Vector2 _hookVelocity;
         private Rope _rope;
 
-        public Shooting()
-        {
-            _transitions = new List<(Func<bool>, Type)>
-            {
-                (() => _atEndOfRope && C._grabbing, typeof(LooseRope)),
-                (() => _atEndOfRope && !C._grabbing, typeof(Retracting)),
-                (() => _cooldownTimer <= 0 && C._grabbing && C._hook.TouchingHookable, typeof(Retracting)),
-                (() => _cooldownTimer <= 0 && C._grabbed, typeof(Shooting))
-            };
-        }
-
         public override Type GetTransition()
         {
-            // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
-            foreach (var t in _transitions)
-                if (t.Item1())
-                    return t.Item2;
+            switch (true)
+            {
+                case true when _atEndOfRope && C._grabbing:
+                    return typeof(LooseRope);
 
-            return base.GetTransition();
+                case true when _atEndOfRope && !C._grabbing:
+                case true when _cooldownTimer <= 0 && C._grabbing && C._hook.TouchingHookable:
+                    return typeof(Retracting);
+
+                case true when _cooldownTimer <= 0 && C._grabbed:
+                    return typeof(Shooting);
+
+                default:
+                    return base.GetTransition();
+            }
         }
 
         public override void OnEnter()
