@@ -30,6 +30,7 @@ public class GrappleGun : Node2D
     private PhysicsReport _playerPhysicsReport;
 
     public Vector2 PullAcceleration { get; private set; }
+    public bool Braking { get; private set; }
 
     public override void _Ready()
     {
@@ -215,19 +216,22 @@ public class GrappleGun : Node2D
             switch (_hooked)
             {
                 case true when atHook:
-                    C.PullAcceleration = -velocity / delta;
+                    C.PullAcceleration = Vector2.Zero;
+                    C.Braking = true;
                     break;
 
                 case true when !atHook:
                     var heading = hook.GlobalPosition - barrel.GlobalPosition;
                     var velPerpendicularToHeading = velocity - velocity.Project(heading);
                     C.PullAcceleration = C._hookPullAccel * delta * (heading - velPerpendicularToHeading).Normalized();
+                    C.Braking = false;
                     break;
 
                 case false:
                     var hookToGun = hook.GlobalPosition.DirectionTo(barrel.GlobalPosition);
                     hook.MoveAndSlide(hookToGun * C._hookRetractSpeed);
                     C.PullAcceleration = Vector2.Zero;
+                    C.Braking = false;
                     break;
             }
         }
@@ -244,6 +248,7 @@ public class GrappleGun : Node2D
             hook.Rotation = 0;
 
             C.PullAcceleration = Vector2.Zero;
+            C.Braking = false;
         }
 
         private void ManageState()

@@ -35,6 +35,8 @@ public class Player : Node2D
     {
         _lastFrameVelocity = _velocity;
 
+        if (_leftGun.Braking || _rightGun.Braking) _velocity = Vector2.Zero;
+
         _velocity += (
             _leftGun.PullAcceleration +
             _rightGun.PullAcceleration +
