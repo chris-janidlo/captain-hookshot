@@ -24,9 +24,9 @@ public class GrappleGun : Node2D
     private Vector2 _aim;
     private Node2D _barrel, _hookFlightContainer;
     private CrateMachine<GrappleGun> _crateMachine;
-    private bool _grabbed, _grabbing, _shot;
     private Hook _hook;
     private PhysicsReport _playerPhysicsReport;
+    private bool _shot, _shooting;
 
     public Vector2 PullAcceleration { get; private set; }
     public bool Braking { get; private set; }
@@ -80,15 +80,14 @@ public class GrappleGun : Node2D
         }
 
         _shot = Input.IsActionJustPressed($"shoot_{_controlDirection}");
-        _grabbed = Input.IsActionJustPressed($"grab_{_controlDirection}");
-        _grabbing = Input.IsActionPressed($"grab_{_controlDirection}");
+        _shooting = Input.IsActionPressed($"shoot_{_controlDirection}");
     }
 
     private class Idle : Crate<GrappleGun>
     {
         public override Type GetTransition()
         {
-            return C._grabbing ? typeof(Shooting) : base.GetTransition();
+            return C._shooting ? typeof(Shooting) : base.GetTransition();
         }
 
         public override void OnProcessFrame(float delta)
@@ -116,14 +115,14 @@ public class GrappleGun : Node2D
         {
             switch (true)
             {
-                case true when _atEndOfRope && C._grabbing:
+                case true when _atEndOfRope && C._shooting:
                     return typeof(LooseRope);
 
-                case true when _atEndOfRope && !C._grabbing:
-                case true when _cooldownTimer <= 0 && C._grabbing && C._hook.TouchingHookable:
+                case true when _atEndOfRope && !C._shooting:
+                case true when _cooldownTimer <= 0 && C._shooting && C._hook.TouchingHookable:
                     return typeof(Retracting);
 
-                case true when _cooldownTimer <= 0 && C._grabbed:
+                case true when _cooldownTimer <= 0 && C._shot:
                     return typeof(Shooting);
 
                 default:
@@ -184,7 +183,7 @@ public class GrappleGun : Node2D
 
         public override void OnEnter()
         {
-            _hooked = C._grabbing && C._hook.TouchingHookable;
+            _hooked = C._shooting && C._hook.TouchingHookable;
 
             _rope = C._ropeScene.Instance<Rope>();
             C._barrel.AddChild(_rope);
@@ -248,7 +247,7 @@ public class GrappleGun : Node2D
 
         private void ManageState()
         {
-            if (_hooked && !C._grabbing) _hooked = false;
+            if (_hooked && !C._shooting) _hooked = false;
         }
     }
 
