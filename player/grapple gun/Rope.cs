@@ -46,10 +46,10 @@ public class Rope : Node2D
         DrawPolyline(_drawingPoints, _color);
     }
 
-    public void Connect(Node2D start = null, Node2D end = null)
+    public void SetConnections(Node2D start = null, Node2D end = null)
     {
-        if (start != null) _start = start;
-        if (end != null) _end = end;
+        _start = start;
+        _end = end;
     }
 
     private void InitializeVerlet()
@@ -92,14 +92,10 @@ public class Rope : Node2D
                 continue;
             }
 
-            var node = _nodes[i];
-
-            var temp = node.Position;
-            node.Position += node.Position - node.OldPosition +
-                             _verletGravityAccel * delta * delta * GlobalTransform.y;
-            node.OldPosition = temp;
-
-            _nodes[i] = node;
+            var temp = _nodes[i].Position;
+            _nodes[i].Position += _nodes[i].Position - _nodes[i].OldPosition +
+                                  _verletGravityAccel * delta * delta * GlobalTransform.y;
+            _nodes[i].OldPosition = temp;
         }
     }
 

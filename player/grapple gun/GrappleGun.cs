@@ -143,7 +143,7 @@ public class GrappleGun : Node2D
 
             _rope = C._ropeScene.Instance<Rope>();
             C._barrel.AddChild(_rope);
-            _rope.Connect(C._barrel, hook);
+            _rope.SetConnections(C._barrel, hook);
 
             _cooldownTimer = C._hookRetractCooldown;
         }
@@ -187,7 +187,7 @@ public class GrappleGun : Node2D
 
             _rope = C._ropeScene.Instance<Rope>();
             C._barrel.AddChild(_rope);
-            _rope.Connect(C._barrel, C._hook);
+            _rope.SetConnections(C._barrel, C._hook);
             _rope.Taut = true;
         }
 
