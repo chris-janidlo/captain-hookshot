@@ -1,5 +1,4 @@
 using System;
-using CaptainHookshot.player.grapple_gun.rope;
 using CaptainHookshot.tools;
 using Godot;
 
@@ -20,7 +19,7 @@ public class GrappleGun : Node2D
 
     [Export] private NodePath _hookPath, _barrelPath;
 
-    [Export] private PackedScene _ropeScene, _tautLineScene;
+    [Export] private PackedScene _ropeScene;
 
     private Vector2 _aim;
     private Node2D _barrel, _hookFlightContainer;
@@ -134,21 +133,18 @@ public class GrappleGun : Node2D
 
         public override void OnEnter()
         {
-            // BUG: rope's connection to hook is wonky if you buffer a shoot input in a different direction after retracting 
-            _rope = C._ropeScene.Instance<Rope>();
-            _rope.Init(C._ropeSegmentCount, C._aim);
-            C._barrel.AddChild(_rope);
-
             var hook = C._hook;
-
             hook.GetParent().RemoveChild(hook);
+            C._hookFlightContainer.AddChild(hook);
             hook.Scale = Vector2.One;
             hook.GlobalPosition = C._barrel.GlobalPosition;
-            C._hookFlightContainer.AddChild(hook);
-            _rope.AttachEndTo(hook);
 
             _hookVelocity = C._aim * C._hookExitSpeed;
             hook.LookAt(hook.GlobalPosition + _hookVelocity);
+
+            _rope = C._ropeScene.Instance<Rope>();
+            C._barrel.AddChild(_rope);
+            _rope.Connect(C._barrel, hook);
 
             _cooldownTimer = C._hookRetractCooldown;
         }
@@ -172,7 +168,7 @@ public class GrappleGun : Node2D
     private class Retracting : Crate<GrappleGun>
     {
         private bool _hooked;
-        private Line2D _line;
+        private Rope _rope;
 
         public override Type GetTransition()
         {
@@ -190,16 +186,15 @@ public class GrappleGun : Node2D
         {
             _hooked = C._grabbing && C._hook.TouchingHookable;
 
-            _line = C._tautLineScene.Instance<Line2D>();
-            C._barrel.AddChild(_line);
-            _line.AddPoint(Vector2.Zero);
-            _line.AddPoint(HookPosRelativeToBarrel());
+            _rope = C._ropeScene.Instance<Rope>();
+            C._barrel.AddChild(_rope);
+            _rope.Connect(C._barrel, C._hook);
+            _rope.Taut = true;
         }
 
         public override void OnProcessFrame(float delta)
         {
             ManageState();
-            _line.SetPointPosition(1, HookPosRelativeToBarrel());
         }
 
         public override void OnProcessPhysics(float delta)
@@ -238,8 +233,8 @@ public class GrappleGun : Node2D
 
         public override void OnExit()
         {
-            C._barrel.RemoveChild(_line);
-            _line.QueueFree();
+            C._barrel.RemoveChild(_rope);
+            _rope.QueueFree();
 
             var hook = C._hook;
             hook.GetParent().RemoveChild(hook);
@@ -254,11 +249,6 @@ public class GrappleGun : Node2D
         private void ManageState()
         {
             if (_hooked && !C._grabbing) _hooked = false;
-        }
-
-        private Vector2 HookPosRelativeToBarrel()
-        {
-            return C._barrel.ToLocal(C._hook.GlobalPosition);
         }
     }
 

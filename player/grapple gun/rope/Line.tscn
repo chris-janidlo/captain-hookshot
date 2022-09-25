@@ -1,6 +1,0 @@
-[gd_scene format=2]
-
-[node name="Line" type="Line2D"]
-width = 0.001
-default_color = Color( 0, 0, 0, 1 )
-antialiased = true

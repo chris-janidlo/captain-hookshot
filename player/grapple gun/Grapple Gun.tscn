@@ -1,11 +1,10 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://player/grapple gun/GrappleGun.cs" type="Script" id=1]
-[ext_resource path="res://player/grapple gun/rope/Rope.tscn" type="PackedScene" id=2]
+[ext_resource path="res://player/grapple gun/Rope.tscn" type="PackedScene" id=2]
 [ext_resource path="res://player/grapple gun/Hook.png" type="Texture" id=3]
 [ext_resource path="res://player/grapple gun/Gun.png" type="Texture" id=4]
 [ext_resource path="res://player/grapple gun/Hook.cs" type="Script" id=5]
-[ext_resource path="res://player/grapple gun/rope/Line.tscn" type="PackedScene" id=6]
 
 [node name="Grapple Gun" type="Node2D"]
 script = ExtResource( 1 )
@@ -20,7 +19,6 @@ _aimSnapRegions = 16
 _hookPath = NodePath("Sprite/Barrel/Hook")
 _barrelPath = NodePath("Sprite/Barrel")
 _ropeScene = ExtResource( 2 )
-_tautLineScene = ExtResource( 6 )
 
 [node name="Sprite" type="Sprite" parent="."]
 texture = ExtResource( 4 )
