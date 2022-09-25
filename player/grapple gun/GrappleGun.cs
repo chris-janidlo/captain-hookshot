@@ -115,12 +115,12 @@ public class GrappleGun : Node2D
         {
             switch (true)
             {
-                case true when _atEndOfRope && C._shooting:
-                    return typeof(LooseRope);
-
                 case true when _atEndOfRope && !C._shooting:
                 case true when _cooldownTimer <= 0 && C._shooting && C._hook.TouchingHookable:
                     return typeof(Retracting);
+
+                case true when _atEndOfRope && C._shooting:
+                    return typeof(LooseRope);
 
                 case true when _cooldownTimer <= 0 && C._shot:
                     return typeof(Shooting);
